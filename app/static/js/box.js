@@ -1,4 +1,4 @@
-function Box(anchor, cursor, angle, boundingBox, boxHelper) {
+function Box(anchor, cursor, angle, boundingBox, boxHelper, data) {
     this.id = app.generate_new_box_id(); // id (int) of Box
     this.object_id = 'car'; // object id (string)
     this.color = hover_color.clone(); // color of corner points
@@ -29,6 +29,38 @@ function Box(anchor, cursor, angle, boundingBox, boxHelper) {
     this.geometry.vertices.push(anchor.clone());
     this.geometry.vertices.push(cursor.clone());
     this.geometry.vertices.push(getCenter(anchor.clone(), cursor.clone()));
+    this.geometry.vertices.push(anchor.clone());  // place holder
+    // this.geometry.vertices.push(anchor.clone());  // place holder
+
+    var maxVector = this.geometry.vertices[0].clone();
+    var minVector = this.geometry.vertices[1].clone();
+    var topLeft = this.geometry.vertices[2].clone();
+    var bottomRight = this.geometry.vertices[3].clone();
+    var bottomCenter = this.geometry.vertices[4].clone();
+   
+    //height and centerZ
+    [heightZ, centerZ]= getHeight(data, this.boundingBox);
+    this.heightZ = heightZ;
+    this.centerZ = centerZ;
+
+     // var lowCenter = getCenter(anchor.clone(), cursor.clone());
+     var highCenter = getCenter(anchor.clone(), cursor.clone());
+     // lowCenter.add(new THREE.Vector3(0, (this.centerZ-this.heightZ/2),0));
+     highCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+     maxVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+     minVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+     topLeft.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+     bottomRight.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+     bottomCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+ 
+     this.geometry.vertices[0] = maxVector.clone();
+     this.geometry.vertices[1] = minVector.clone();
+     this.geometry.vertices[2] = topLeft.clone();
+     this.geometry.vertices[3] = bottomRight.clone();
+     this.geometry.vertices[4] = bottomCenter.clone();
+     // this.geometry.vertices[5] = lowCenter.clone();
+     this.geometry.vertices[5] = highCenter.clone();
+     console.log(this.geometry.vertices)
 
     this.hasPredictedLabel = false;
     this.text_label;
@@ -57,15 +89,28 @@ function Box(anchor, cursor, angle, boundingBox, boxHelper) {
             rotate(v1, v2, this.angle);
 
             // calculating corner points and rotating point
-            var minVector = getMin(v1, v2);
             var maxVector = getMax(v1, v2);
+            var minVector = getMin(v1, v2);
             var topLeft = getTopLeft(v1, v2);
             var bottomRight = getBottomRight(v1, v2);
             var topCenter = getCenter(topLeft, maxVector);
             var bottomCenter = getCenter(minVector, bottomRight);
 
+            [heightZ, centerZ]= getHeight(data, this.boundingBox);
+            this.heightZ = heightZ;
+            this.centerZ = centerZ;
+             // var lowCenter = getCenter(maxVector.clone(), minVector.clone());
+             var highCenter = getCenter(maxVector.clone(), minVector.clone());
+             // lowCenter.add(new THREE.Vector3(0, (this.centerZ-this.heightZ/2),0));
+             highCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+             maxVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+             minVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+             topLeft.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+             bottomRight.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+             bottomCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+
             // need to do this to make matrix invertible
-            maxVector.y = 0.00001; 
+            maxVector.y += 0.00001; 
 
             // setting bounding box limits
             this.boundingBox.set(minVector.clone(), maxVector.clone());
@@ -74,7 +119,7 @@ function Box(anchor, cursor, angle, boundingBox, boxHelper) {
             this.boxHelper.rotation.y = this.angle;
 
             // setting y coordinate back to zero since we are done with drawing
-            maxVector.y = 0;
+            // maxVector.y = 0;
 
             // rotate back the corner points
             rotate(minVector, maxVector, -this.angle);
@@ -87,6 +132,83 @@ function Box(anchor, cursor, angle, boundingBox, boxHelper) {
             this.geometry.vertices[2] = topLeft.clone();
             this.geometry.vertices[3] = bottomRight.clone();
             this.geometry.vertices[4] = bottomCenter.clone();
+            // this.geometry.vertices[5] = lowCenter.clone();
+            this.geometry.vertices[5] = highCenter.clone();
+
+            // tell scene to update corner points
+            this.geometry.verticesNeedUpdate = true;
+        }
+    }
+
+    // method to reheight the 3D bounding box manually, only under 3D mode
+    this.reheight = function (mouse) {
+        if (mouse.z != this.anchor.y) {
+//             console.log(mouse.z);
+
+            // var v1 = cursor.clone();
+            // var v2 = this.anchor.clone();
+            //
+            // v1.y = 0;
+            // v2.y = 0;
+            //
+            // // rotate cursor and anchor
+            // rotate(v1, v2, this.angle);
+
+            // calculating corner points and rotating point
+            var maxVector = this.geometry.vertices[0].clone();
+            maxVector.y = 0;
+            var minVector = this.geometry.vertices[1].clone();
+            minVector.y = 0;
+            var topLeft = this.geometry.vertices[2].clone();
+            topLeft.y = 0;
+            var bottomRight = this.geometry.vertices[3].clone();
+            bottomRight.y = 0;
+            var topCenter = getCenter(maxVector, topLeft);
+            var bottomCenter = this.geometry.vertices[4].clone();
+            bottomCenter.y = 0;
+
+            var bottom = this.centerZ - this.heighZ/2;
+            var top = mouse.clone().z;
+            this.heightZ = top-bottom;
+            this.centerZ = (top+bottom)/2;
+            // var lowCenter = getCenter(maxVector.clone(), minVector.clone());
+            var highCenter = getCenter(maxVector.clone(), minVector.clone());
+            // lowCenter.add(new THREE.Vector3(0, (this.centerZ-this.heightZ/2),0));
+            highCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+            maxVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+            minVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+            topLeft.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+            bottomRight.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+            bottomCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+
+            // need to do this to make matrix invertible
+            maxVector.y += 0.00001;
+
+            // setting bounding box limits
+            this.boundingBox.set(minVector.clone(), maxVector.clone());
+
+            // rotate BoxHelper back
+            this.boxHelper.rotation.y = this.angle;
+
+            // setting y coordinate back to zero since we are done with drawing
+            // maxVector.y = 0;
+
+            // rotate back the corner points
+            rotate(minVector, maxVector, -this.angle);
+            rotate(topLeft, bottomRight, -this.angle);
+            rotate(topCenter, bottomCenter, -this.angle);
+
+            // set updated corner points used to resize box
+            this.geometry.vertices[0] = maxVector.clone();
+            this.geometry.vertices[1] = minVector.clone();
+            this.geometry.vertices[2] = topLeft.clone();
+            this.geometry.vertices[3] = bottomRight.clone();
+            this.geometry.vertices[4] = bottomCenter.clone();
+             // this.geometry.vertices[5] = lowCenter.clone();
+             this.geometry.vertices[5] = highCenter.clone();
+
+             this.boundingBox.max.y = this.centerZ + this.heightZ/2;
+             this.boundingBox.min.y = this.centerZ - this.heightZ/2;
 
             // tell scene to update corner points
             this.geometry.verticesNeedUpdate = true;
@@ -98,15 +220,34 @@ function Box(anchor, cursor, angle, boundingBox, boxHelper) {
     this.rotate = function(cursor) {
         // get corner points
         var maxVector = this.geometry.vertices[0].clone();
+        maxVector.y = 0;
         var minVector = this.geometry.vertices[1].clone();
+        minVector.y = 0;
         var topLeft = this.geometry.vertices[2].clone();
+        topLeft.y = 0;
         var bottomRight = this.geometry.vertices[3].clone();
+        bottomRight.y = 0;
         var topCenter = getCenter(maxVector, topLeft);
         var bottomCenter = this.geometry.vertices[4].clone();
+        bottomCenter.y = 0;
 
         // get relative angle of cursor with respect to 
         var center = getCenter(maxVector, minVector);
         var angle = getAngle(center, bottomCenter, cursor, topCenter);
+
+        [heightZ, centerZ]= getHeight(data, this.boundingBox);
+        this.heightZ = heightZ;
+        this.centerZ = centerZ;
+          // var lowCenter = getCenter(maxVector.clone(), minVector.clone());
+          var highCenter = getCenter(maxVector.clone(), minVector.clone());
+          // lowCenter.add(new THREE.Vector3(0, (this.centerZ-this.heightZ/2),0));
+          highCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+          maxVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+          minVector.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+          topLeft.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+          bottomRight.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+          bottomCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightZ/2),0));
+  
 
         // update angle of Box and bounding box
         this.angle = this.angle + angle;
@@ -122,6 +263,8 @@ function Box(anchor, cursor, angle, boundingBox, boxHelper) {
         this.geometry.vertices[2] = topLeft.clone();
         this.geometry.vertices[3] = bottomRight.clone();
         this.geometry.vertices[4] = bottomCenter.clone();
+        // this.geometry.vertices[5] = lowCenter.clone();
+        this.geometry.vertices[5] = highCenter.clone();
 
         // tell scene to update corner points
         this.geometry.verticesNeedUpdate = true;
@@ -147,18 +290,43 @@ function Box(anchor, cursor, angle, boundingBox, boxHelper) {
 
         // shift bounding box given new corner points
         var maxVector = this.geometry.vertices[0].clone();
+        maxVector.y = 0;
         var minVector = this.geometry.vertices[1].clone();
+        minVector.y = 0;
         var topLeft = this.geometry.vertices[2].clone();
+        topLeft.y = 0;
         var bottomRight = this.geometry.vertices[3].clone();
+        bottomRight.y = 0;
         var topCenter = getCenter(maxVector, topLeft);
         var bottomCenter = this.geometry.vertices[4].clone();
+        bottomCenter.y = 0;
 
         rotate(maxVector, minVector, this.angle);
         rotate(topLeft, bottomRight, this.angle);
         rotate(topCenter, bottomCenter, this.angle);
 
+        [heightZ, centerZ]= getHeight(data, this.boundingBox);
+        this.heightZ = heightZ;
+        this.centerZ = centerZ;
+        // var lowCenter = getCenter(maxVector.clone(), minVector.clone());
+        var highCenter = getCenter(maxVector.clone(), minVector.clone());
+        // lowCenter.add(new THREE.Vector3(0, (this.centerZ-this.heightCar/2),0));
+        highCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightCar/2),0));
+        maxVector.add(new THREE.Vector3(0, (this.centerZ+this.heightCar/2),0));
+        minVector.add(new THREE.Vector3(0, (this.centerZ+this.heightCar/2),0));
+        topLeft.add(new THREE.Vector3(0, (this.centerZ+this.heightCar/2),0));
+        bottomRight.add(new THREE.Vector3(0, (this.centerZ+this.heightCar/2),0));
+        bottomCenter.add(new THREE.Vector3(0, (this.centerZ+this.heightCar/2),0));
+        this.geometry.vertices[0] = maxVector.clone();
+        this.geometry.vertices[1] = minVector.clone();
+        this.geometry.vertices[2] = topLeft.clone();
+        this.geometry.vertices[3] = bottomRight.clone();
+        this.geometry.vertices[4] = bottomCenter.clone();
+        // this.geometry.vertices[5] = lowCenter.clone();
+        this.geometry.vertices[5] = highCenter.clone();
+
         // need to do this to make matrix invertible
-        maxVector.y += 0.0000001; 
+        maxVector.y += 0.00001; 
 
         this.boundingBox.set(minVector, maxVector);
 
@@ -368,7 +536,41 @@ function highlightCorners() {
     }
 }
 
+// get height and z-center
+function getHeight(data, boundingBox) {
+    var zs = [];
+    var xs = [];
+    var ys = [];
+    var stride = 4;
+    var x_point = 0;
+    var y_point = 0;
+    var l = data.length/4;
+    var boxMaxVector = new THREE.Vector2(boundingBox.max.x, boundingBox.max.z);
+    var boxMinVector = new THREE.Vector2(boundingBox.min.x, boundingBox.min.z);
+    // console.log(boxMaxVector);
+    var box2D = new THREE.Box2(boxMinVector, boxMaxVector);
+    for ( var i = 0; i < l; i ++ ) {
+        x_point = data[ stride * i ];
+        y_point = data[ stride * i + 1];
+        if (box2D.distanceToPoint( new THREE.Vector2(y_point, x_point)) == 0 ) {
+            zs.push(data[ stride * i + 2]);
+            xs.push(data[ stride * i]);
+            ys.push(data[ stride * i + 1]);
+        }
+    }
+    // for debuging
+    // console.log(boundingBox);
+    // console.log(zs);
+    // console.log(getMaxElement(xs));
+    // console.log(getMinElement(xs));
+    // console.log(getMaxElement(ys));
+    // console.log(getMinElement(ys));
 
+    min = getMinElement(zs);
+    max = getMaxElement(zs);
+    var heightZ = max-min;
+    return [max-min, (max+min)/2];
+}
 
 
 // method to add box to boundingBoxes and object id table
@@ -391,7 +593,7 @@ function stringifyBoundingBoxes(boundingBoxes) {
 function createBox(anchor, v, angle) {
     newBoundingBox = new THREE.Box3(v, anchor);
     newBoxHelper = new THREE.Box3Helper( newBoundingBox, 0xffff00 );
-    newBox = new Box(anchor, v, angle, newBoundingBox, newBoxHelper);
+    newBox = new Box(anchor, v, angle, newBoundingBox, newBoxHelper, data);
     newBox.resize(v);
 
     return newBox;
@@ -448,9 +650,10 @@ function OutputBox(box) {
     var v3 = box.geometry.vertices[2];
     var center = getCenter(v1, v2);
     this.box_id = box.id;
-    this.center = new THREE.Vector2(center.z, center.x);
+    this.center = new THREE.Vector3(center.z, center.x, box.centerZ);
     this.width = distance2D(v2, v3);
     this.length = distance2D(v1, v3);
+    this.height = box.heightZ;
     this.angle = box.angle;
     this.object_id = box.object_id;
     this.timestamps = box.timestamps;
