@@ -20,12 +20,14 @@ var boxmaterial = new THREE.MeshDepthMaterial( {opacity: .1} );
 var selectedBox;
 var angle;
 var hoverIdx, hoverBox;
-var resizeBox, rotatingBox;
+var resizeBox, rotatingBox, reheightBox;
+var dispPlane;
 var isResizing = false;
 var isMoving = false;
+var isReHeighting = false;
 var isRotating = false;
 var grid;
-var pointMaterial = new THREE.PointsMaterial( { size: pointSize * 8, sizeAttenuation: false, vertexColors: THREE.VertexColors } );
+var pointMaterial = new THREE.PointsMaterial( { size: pointSize * 9, sizeAttenuation: false, vertexColors: THREE.VertexColors } );
 
 var isRecording = true;
 var app;
@@ -302,6 +304,7 @@ function onDocumentMouseDown( event ) {
                 var box = intersection[0];
                 var closestIdx = closestPoint(anchor, box.geometry.vertices);
                 // console.log("closest: ", closestIdx);
+                // 4th node ir for rotation
                 if (closestIdx == 4) {
                     isRotating = true;
                     rotatingBox = box;
@@ -325,7 +328,7 @@ function onDocumentMouseDown( event ) {
                 newBoxHelper = new THREE.Box3Helper( newBoundingBox, 0xffff00 );
                 anchor = anchor.clone();
 
-                newBox = new Box(anchor, v, angle, newBoundingBox, newBoxHelper);
+                newBox = new Box(anchor, v, angle, newBoundingBox, newBoxHelper, data);
             }
         }
     }
@@ -433,12 +436,19 @@ function moveMode( event ) {
     // assertRecordMode();
     if (isRecording) {
         controls.enabled = true;
-        app.move2D = false;
+        // app.move2D = false;
         document.getElementById( 'move2D' ).className = "";
         document.getElementById( 'move' ).className = "selected";
         controls.maxPolarAngle = 2 * Math.PI;
         controls.minPolarAngle = -2 * Math.PI;
         app.resume_3D_time();
+        for (var i = 0; i < boundingBoxes.length; i++) {
+            var box = boundingBoxes[i];
+            box.boundingBox.max.y = box.centerZ + box.heightCar/2;
+            box.boundingBox.min.y = box.centerZ - box.heightCar/2;
+            // console.log(box);
+        }
+        app.move2D = false;
     }
     unprojectFromXZ();
 }
@@ -476,9 +486,14 @@ function move2DMode( event ) {
             controls.minPolarAngle = 0;
             camera.updateProjectionMatrix();
             projectOntoXZ();
-            // controls.reset();
-
+            // controls.reset();    
             app.pause_3D_time();
+            // for (var i = 0; i < boundingBoxes.length; i++) {
+            //     var box = boundingBoxes[i];
+            //     box.boundingBox.max.y = 0.00001;
+            //     box.boundingBox.min.y = 0;
+            //     // console.log(box);
+            // }    
         }
         controls.enabled = true;
         controls.update();
@@ -528,5 +543,7 @@ function reset() {
         yCoords = [];
     }
 }
+
+
 
 
