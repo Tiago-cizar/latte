@@ -90,12 +90,18 @@ function autoDrawModeToggle(b) {
     autoDrawMode = b;
 }
 // toggles between move2D and move3D
-function toggleControl(b) {
+function control(b) {
     if (b) {
         controls.enabled = b;
         controls.update();
     } else {
+        // controls.enabled = b;
+        // controls.update();
         if (app.move2D) {
+            controls.enabled = b;
+            controls.update();
+        }
+        if (app.mode3D){
             controls.enabled = b;
             controls.update();
         }
